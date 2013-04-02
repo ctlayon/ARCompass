@@ -15,7 +15,6 @@ import android.webkit.WebSettings.RenderPriority;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import com.metaio.Example.R;
 import com.metaio.sdk.MetaioDebug;
 import com.metaio.tools.io.AssetsManager;
 
@@ -125,8 +124,8 @@ public class MainActivity extends Activity implements WebFiles
 	    	if( url.startsWith( MAP_ID ) ) {
 	    		MetaioDebug.log( "Native code to be loaded " + MAP_ID );
 	    		
-	    		Intent intent = new Intent(getApplicationContext(), MapActivity.class );
-    			startActivity(intent);
+	    		Intent intent = new Intent( getApplicationContext(), ARMapActivity.class );
+    			startActivity( intent );
     			
     			return true;
 	    	} else if( url.startsWith( COMP_ID ) ) {
