@@ -130,7 +130,12 @@ public class MainActivity extends Activity implements WebFiles
     			return true;
 	    	} else if( url.startsWith( COMP_ID ) ) {
 	    		MetaioDebug.log( "Native code to be loaded " + COMP_ID );
-	    		
+	    		if( ID.equals("1") ) {
+	    			
+	    		} else if( ID.equals( "2" ) ) {
+	    			Intent intent = new Intent( getApplicationContext(), ARCompass.class );
+	    			startActivity( intent );	    			
+	    		}
 	    		return true;
 	    	}
 	    	return false;

@@ -137,7 +137,7 @@ public abstract class MetaioSDKViewActivity extends Activity implements MetaioSu
 			
 			// create the SDK instance
 			
-			final String signature = "sY+4Q0zhQE+jobqN1JHtiVLH9QgqomVc/eDrbdlmOX8=";
+			final String signature = "TaPnBDyaZEbDimN3NzSVv7yfq3HUa+sL+/DVC8oeN+I=";
 			  
 			// Create sdk by passing Activity instance and application signature
 			metaioSDK = MetaioSDK.CreateMetaioSDKAndroid(this, signature);
