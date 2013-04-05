@@ -101,13 +101,11 @@ public class ARMapActivity extends MetaioSDKViewActivity implements SensorsCompo
 
 	@Override
 	public void onGravitySensorChanged(float[] gravity) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void onHeadingSensorChanged(float[] orientation) {
-		// TODO Auto-generated method stub
 		
 	}
 

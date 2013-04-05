@@ -22,21 +22,24 @@ import com.metaio.tools.io.AssetsManager;
 
 public class ARCompass extends MetaioSDKViewActivity implements SensorsComponentAndroid.Callback  {
 	 
-	/**
-	 * Geometries
-	 */
+	// POI's for compass aka North, South, East, West
+	
 	private IGeometry mGeometrySouth;
 	private IGeometry mGeometryWest;
 	private IGeometry mGeometryNorth;
 	private IGeometry mGeometryEast;
 	
+	// Radar for tracking POI's
+	
 	private IRadar mRadar;
+	
+	// Testing variable
+	// TODO: Remove when done testing
 	
 	private LLACoordinate mCoord;
 
-	/**
-	 * Offset from current location
-	 */
+	// Determines how far away each geometry appears
+	
 	private static final double OFFSET = 0.00002;
 	
 	@Override
@@ -83,6 +86,10 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	}
 
 
+	/**
+	 * Click Handler for the close button
+	 * @param v View object you're currently in ( ARCamera mode )
+	 */
 	public void onButtonClick(View v)
 	{
 		finish();
@@ -103,6 +110,8 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	@Override
 	protected void loadContent() 
 	{
+		// Load the POI's into memory
+		
 		String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
 		if ( filepath != null ) 
 		{
@@ -117,18 +126,24 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 		updateGeometriesLocation( mSensors.getLocation() );
 		
 		// create radar
+		
 		mRadar = metaioSDK.createRadar();
 		mRadar.setBackgroundTexture( AssetsManager.getAssetPath( "Assets5/radar.png" ) );
 		mRadar.setObjectsDefaultTexture( AssetsManager.getAssetPath( "Assets5/yellow.png" ) );
 		mRadar.setRelativeToScreen( IGeometry.ANCHOR_TL );
 						
 		// add geometries to the radar
+		
 		mRadar.add( mGeometryNorth );
 		mRadar.add( mGeometrySouth );
 		mRadar.add( mGeometryWest  );
 		mRadar.add( mGeometryEast  );		
 	}
-	
+	/**
+	 * Helper function for creating the North, South, East, West Text
+	 * @param billBoardTitle Text the ARBilliboard contains
+	 * @return filepath location to texture
+	 */
 	private String createBillboardTexture( String billBoardTitle )
     {
            try
@@ -137,9 +152,11 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
                   Paint mPaint = new Paint();
 
                   // Load background image (256x128), and make a mutable copy
+                  
                   Bitmap billboard = null;
                   
                   //reading billboard background
+                  
                   String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
                   Bitmap mBackgroundImage = BitmapFactory.decodeFile(filepath);
                   
@@ -156,6 +173,7 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
                   float x = 30;
 
                   // Draw POI name
+                  
                   if (billBoardTitle.length() > 0)
                   {
                         String n = billBoardTitle.trim();
@@ -166,6 +184,7 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
                         c.drawText( n.substring(0, i), x, y, mPaint );
 
                         // Draw second line if valid
+                        
                         if (i < n.length())
                         {
                                n = n.substring(i);
@@ -185,6 +204,7 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 
 
                   // writing file
+                  
                   try
                   {
                 	  FileOutputStream out = new FileOutputStream( texturepath );
@@ -208,6 +228,12 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
            return null;
     }
 	
+	/**
+	 * Updates the position of the Geometries
+	 * @param location current position of the phone
+	 * 
+	 * TODO: Remove debugging statements
+	 */
 	private void updateGeometriesLocation( LLACoordinate location )
 	{
 		if (mGeometrySouth != null)

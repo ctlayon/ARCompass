@@ -1,4 +1,3 @@
-// Copyright 2007-2012 metaio GmbH. All rights reserved.
 package com.ctlayon.arcompass;
 import java.io.IOException;
 
@@ -68,6 +67,10 @@ public class MainActivity extends Activity implements WebFiles
 		
 	}
 	
+	/**
+	 * Asynchronously loads and extracts assests 
+	 * @author ctlayon - cquinla2@illinois.edu
+	 */
 	private class AssetsExtracter extends AsyncTask<Integer, Integer, Boolean> {
 
 		@Override
@@ -103,7 +106,11 @@ public class MainActivity extends Activity implements WebFiles
 		
 	}
 	
-	
+	/**
+	 * Handles the loading of URLs between pages
+	 * @author ctlayon
+	 *
+	 */
 	private class WebViewHandler extends WebViewClient {
 		@Override
 		public void onPageStarted( WebView view, String url, Bitmap favicon ) {
