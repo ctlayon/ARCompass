@@ -27,7 +27,3 @@ proguard/
 *.ipr
 *.iws
 .idea/
-
-# Ignore MapActivity so my API Key doesn't get commited
-map.xml
-AndroidManifest.xml

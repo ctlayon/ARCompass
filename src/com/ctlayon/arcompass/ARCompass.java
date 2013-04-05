@@ -18,7 +18,6 @@ import com.metaio.sdk.jni.IGeometry;
 import com.metaio.sdk.jni.IMetaioSDKCallback;
 import com.metaio.sdk.jni.IRadar;
 import com.metaio.sdk.jni.LLACoordinate;
-import com.metaio.sdk.jni.Vector3d;
 import com.metaio.tools.io.AssetsManager;
 
 public class ARCompass extends MetaioSDKViewActivity implements SensorsComponentAndroid.Callback  {
@@ -32,6 +31,8 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	private IGeometry mGeometryEast;
 	
 	private IRadar mRadar;
+	
+	private LLACoordinate mCoord;
 
 	/**
 	 * Offset from current location
@@ -41,13 +42,13 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
-		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
-		
-		
+				
 		//Load Tracking data
-		boolean result = metaioSDK.setTrackingConfiguration("GPS");  
-		MetaioDebug.log("Tracking data loaded: " + result);  
+		String trackingConfigFile = AssetsManager.getAssetPath("Assets5/tracking.xml");
+		
+		boolean result = metaioSDK.setTrackingConfiguration(trackingConfigFile);
+		MetaioDebug.log( "Tracking data loaded: " + result );  
 	}
 	
 	@Override
@@ -56,12 +57,9 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 		super.onPause();
 		
 		// remove callback
-		if (mSensors != null)
-		{
-			mSensors.registerCallback(null);
-		//	mSensorsManager.pause();
-		}
 		
+		if (mSensors != null)
+			mSensors.registerCallback(null);		
 		
 	}
 
@@ -71,19 +69,17 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 		super.onResume();
 
 		// Register callback to receive sensor updates
+		
 		if (mSensors != null)
-		{
 			mSensors.registerCallback(this);
-			//mSensorsManager.resume();
-		}
 		
 	}
 
 
 	@Override
-	public void onLocationSensorChanged(LLACoordinate location)
+	public void onLocationSensorChanged( LLACoordinate location )
 	{
-		updateGeometriesLocation(location);
+		updateGeometriesLocation( mCoord );
 	}
 
 
@@ -107,14 +103,16 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	@Override
 	protected void loadContent() 
 	{
-		String filepath = AssetsManager.getAssetPath("Assets5/POI_bg.png");
-		if (filepath != null) 
+		String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
+		if ( filepath != null ) 
 		{
 			mGeometryNorth = metaioSDK.loadImageBillboard( createBillboardTexture( "North" ) );
 			mGeometrySouth = metaioSDK.loadImageBillboard( createBillboardTexture( "South" ) );
 			mGeometryWest  = metaioSDK.loadImageBillboard( createBillboardTexture( "West" ) );
 			mGeometryEast  = metaioSDK.loadImageBillboard( createBillboardTexture( "East" ) );				
 		}
+		
+		mCoord = mSensors.getLocation();
 		
 		updateGeometriesLocation( mSensors.getLocation() );
 		
@@ -125,13 +123,13 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 		mRadar.setRelativeToScreen( IGeometry.ANCHOR_TL );
 						
 		// add geometries to the radar
-		mRadar.add(mGeometryNorth);
-		mRadar.add(mGeometrySouth);
-		mRadar.add(mGeometryWest);
-		mRadar.add(mGeometryEast);		
+		mRadar.add( mGeometryNorth );
+		mRadar.add( mGeometrySouth );
+		mRadar.add( mGeometryWest  );
+		mRadar.add( mGeometryEast  );		
 	}
 	
-	private String createBillboardTexture(String billBoardTitle)
+	private String createBillboardTexture( String billBoardTitle )
     {
            try
            {
@@ -142,17 +140,17 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
                   Bitmap billboard = null;
                   
                   //reading billboard background
-                  String filepath = AssetsManager.getAssetPath("Assets5/POI_bg.png");
+                  String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
                   Bitmap mBackgroundImage = BitmapFactory.decodeFile(filepath);
                   
-                  billboard = mBackgroundImage.copy(Bitmap.Config.ARGB_8888, true);
+                  billboard = mBackgroundImage.copy( Bitmap.Config.ARGB_8888, true );
 
 
-                  Canvas c = new Canvas(billboard);
+                  Canvas c = new Canvas( billboard );
 
-                  mPaint.setColor(Color.WHITE);
-                  mPaint.setTextSize(24);
-                  mPaint.setTypeface(Typeface.DEFAULT);
+                  mPaint.setColor( Color.WHITE );
+                  mPaint.setTextSize( 24 );
+                  mPaint.setTypeface( Typeface.DEFAULT );
 
                   float y = 40;
                   float x = 30;
@@ -164,22 +162,21 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 
                         final int maxWidth = 160;
 
-                        int i = mPaint.breakText(n, true, maxWidth, null);
-                        c.drawText(n.substring(0, i), x, y, mPaint);
+                        int i = mPaint.breakText( n, true, maxWidth, null );
+                        c.drawText( n.substring(0, i), x, y, mPaint );
 
                         // Draw second line if valid
                         if (i < n.length())
                         {
                                n = n.substring(i);
                                y += 20;
-                               i = mPaint.breakText(n, true, maxWidth, null);
+                               i = mPaint.breakText( n, true, maxWidth, null );
 
-                               if (i < n.length())
+                               if ( i < n.length() )
                                {
                                       i = mPaint.breakText(n, true, maxWidth - 20, null);
                                       c.drawText(n.substring(0, i) + "...", x, y, mPaint);
-                               } else
-                               {
+                               } else {
                                       c.drawText(n.substring(0, i), x, y, mPaint);
                                }
                         }
@@ -190,12 +187,12 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
                   // writing file
                   try
                   {
-                	  FileOutputStream out = new FileOutputStream(texturepath);
-                      billboard.compress(Bitmap.CompressFormat.PNG, 90, out);
-                      MetaioDebug.log("Texture file is saved to "+texturepath);
+                	  FileOutputStream out = new FileOutputStream( texturepath );
+                      billboard.compress( Bitmap.CompressFormat.PNG, 90, out );
+                      MetaioDebug.log( "Texture file is saved to " + texturepath );
                       return texturepath;
-                  } catch (Exception e) {
-                      MetaioDebug.log("Failed to save texture file");
+                  } catch ( Exception e ) {
+                      MetaioDebug.log( "Failed to save texture file" );
                 	  e.printStackTrace();
                    }
                  
@@ -204,40 +201,40 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 
            } catch (Exception e)
            {
-                  MetaioDebug.log("Error creating billboard texture: " + e.getMessage());
-                  MetaioDebug.printStackTrace(Log.DEBUG, e);
+                  MetaioDebug.log( "Error creating billboard texture: " + e.getMessage() );
+                  MetaioDebug.printStackTrace( Log.DEBUG, e );
                   return null;
            }
            return null;
     }
 	
-	private void updateGeometriesLocation(LLACoordinate location)
+	private void updateGeometriesLocation( LLACoordinate location )
 	{
 		if (mGeometrySouth != null)
 		{
 			location.setLatitude( location.getLatitude() - OFFSET );
-			MetaioDebug.log("geometrySouth.setTranslationLLA: "+location);
-			mGeometrySouth.setTranslationLLA(location);
+			MetaioDebug.log( "geometrySouth.setTranslationLLA: "+location );
+			mGeometrySouth.setTranslationLLA( location );
 			location.setLatitude( location.getLatitude() + OFFSET );
 		}
 		
 		if (mGeometryNorth != null)
 		{
-			location.setLatitude(location.getLatitude() + OFFSET );
-			MetaioDebug.log("geometryNorth.setTranslationLLA: "+location);
-			mGeometryNorth.setTranslationLLA(location);
-			location.setLatitude(location.getLatitude() - OFFSET );
+			location.setLatitude( location.getLatitude() + OFFSET );
+			MetaioDebug.log( "geometryNorth.setTranslationLLA: "+location );
+			mGeometryNorth.setTranslationLLA( location );
+			location.setLatitude( location.getLatitude() - OFFSET );
 		}
 		
 		if (mGeometryWest != null)
 		{
 			location.setLongitude( location.getLongitude() - OFFSET );
-			MetaioDebug.log( "geometryWest.setTranslationLLA: "+location);
+			MetaioDebug.log( "geometryWest.setTranslationLLA: "+location );
 			mGeometryWest.setTranslationLLA( location );
-			location.setLongitude(location.getLongitude() + OFFSET);
+			location.setLongitude( location.getLongitude() + OFFSET );
 		}
 		
-		if (mGeometryEast != null)
+		if ( mGeometryEast != null )
 		{
 			location.setLongitude( location.getLongitude() + OFFSET );
 			MetaioDebug.log( "geometryEast.setTranslationLLA: " + location );
@@ -248,18 +245,18 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	}
 	
 	@Override
-	protected void onGeometryTouched(final IGeometry geometry) 
+	protected void onGeometryTouched( final IGeometry geometry ) 
 	{
-		MetaioDebug.log("Geometry selected: "+geometry);
+		MetaioDebug.log( "Geometry selected: " + geometry );
 		
-		mSurfaceView.queueEvent(new Runnable()
+		mSurfaceView.queueEvent( new Runnable()
 		{
 
 			@Override
 			public void run() 
 			{
-				mRadar.setObjectsDefaultTexture(AssetsManager.getAssetPath("Assets5/yellow.png"));
-				mRadar.setObjectTexture(geometry, AssetsManager.getAssetPath("Assets5/red.png"));
+				mRadar.setObjectsDefaultTexture( AssetsManager.getAssetPath( "Assets5/yellow.png" ) );
+				mRadar.setObjectTexture( geometry, AssetsManager.getAssetPath( "Assets5/red.png" ) );
 			}
 		
 				
@@ -267,14 +264,12 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	}
 
 	@Override
-	public void onGravitySensorChanged(float[] gravity) {
-		// TODO Auto-generated method stub
+	public void onGravitySensorChanged( float[] gravity ) {
 		
 	}
 
 	@Override
 	public void onHeadingSensorChanged(float[] orientation) {
-		// TODO Auto-generated method stub
 		
 	}
 }
