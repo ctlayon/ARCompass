@@ -69,7 +69,6 @@ public class MainActivity extends Activity implements WebFiles
 	
 	/**
 	 * Asynchronously loads and extracts assests 
-	 * @author ctlayon - cquinla2@illinois.edu
 	 */
 	private class AssetsExtracter extends AsyncTask<Integer, Integer, Boolean> {
 
@@ -108,7 +107,6 @@ public class MainActivity extends Activity implements WebFiles
 	
 	/**
 	 * Handles the loading of URLs between pages
-	 * @author ctlayon
 	 *
 	 */
 	private class WebViewHandler extends WebViewClient {
@@ -138,13 +136,14 @@ public class MainActivity extends Activity implements WebFiles
 	    	} else if( url.startsWith( COMP_ID ) ) {
 	    		MetaioDebug.log( "Native code to be loaded " + COMP_ID );
 	    		if( ID.equals("1") ) {
-	    			
+	    			Intent intent = new Intent( getApplicationContext(), CompassActivity.class );
+	    			startActivity( intent );
 	    		} else if( ID.equals( "2" ) ) {
 	    			Intent intent = new Intent( getApplicationContext(), ARCompass.class );
 	    			startActivity( intent );	    			
 	    		}
 	    		return true;
-	    	}
+	    	} 
 	    	return false;
 	    	
 	    }

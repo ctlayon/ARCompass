@@ -1,116 +1,112 @@
 package com.ctlayon.arcompass;
 
-import android.os.Bundle;
-import android.view.View;
+import java.util.ArrayList;
 
+import android.app.Activity;
+import android.graphics.Color;
+import android.location.Location;
+import android.os.Bundle;
+import android.os.StrictMode;
+import android.util.Log;
+
+import com.ctlayon.arcompass.MyLocation.LocationResult;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.metaio.sdk.MetaioDebug;
-import com.metaio.sdk.SensorsComponentAndroid;
-import com.metaio.sdk.jni.IGeometry;
-import com.metaio.sdk.jni.IMetaioSDKCallback;
-import com.metaio.sdk.jni.LLACoordinate;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.maps.GeoPoint;
 
-public class ARMapActivity extends MetaioSDKViewActivity implements SensorsComponentAndroid.Callback  {
+public class ARMapActivity extends Activity {
 	 
 	private GoogleMap map;
-	
-	@Override
+	private LatLng mCurr;
+	MyLocation myLocation;
+		
 	public void onCreate(Bundle savedInstanceState) 
 	{
-		super.onCreate(savedInstanceState);
+		super.onCreate( savedInstanceState );
+		setContentView( R.layout.map );
 		
-		//Load Tracking data
-		boolean result = metaioSDK.setTrackingConfiguration("GPS");  
-		MetaioDebug.log("Tracking data loaded: " + result); 
+		StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+		StrictMode.setThreadPolicy(policy);
+        
+		LocationResult locationResult = new LocationResult(){
+		    @Override
+		    public void gotLocation(Location location){
+		        Log.d( "location","Got Location" );
+		        mCurr = new LatLng( location.getLatitude(), location.getLongitude() );
+		        map.animateCamera( CameraUpdateFactory.newLatLngZoom( mCurr, 15 ) );
+		        map.setOnMapClickListener( mapClickListener() );
+		    }
+		};
 		
-		final LatLng latlng = new LatLng( 
-				mSensors.getLocation().getLatitude(), 
-				mSensors.getLocation().getLongitude() );
-		
-		MetaioDebug.log( "Latlng: " + latlng.latitude + " " + latlng.longitude );
-		
-		map = ( (MapFragment) getFragmentManager().findFragmentById(R.id.map))
-		        .getMap();
-		
+		myLocation = new MyLocation();
+		myLocation.getLocation( this, locationResult );
+        
+		map = ( (MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();		
 		map.setMyLocationEnabled( true );		
-		map.animateCamera( CameraUpdateFactory.newLatLngZoom( latlng, 15 ) );
 	}
 	
 	@Override
-	protected void onPause() 
-	{
+	public void onPause() {
 		super.onPause();
 		
-		// remove callback
-		if (mSensors != null)
-		{
-			mSensors.registerCallback(null);
-		}
-		
-		
 	}
-
+	
 	@Override
-	protected void onResume() 
-	{
+	public void onResume() {
 		super.onResume();
-
-		// Register callback to receive sensor updates
-		if (mSensors != null)
-		{
-			mSensors.registerCallback(this);
-		}
+	}
+	
+	private GoogleMap.OnMapClickListener mapClickListener() {
 		
+		GoogleMap.OnMapClickListener clickListener = new GoogleMap.OnMapClickListener() {
+			
+			@Override
+			public void onMapClick(LatLng latLng) {
+			
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.position(latLng);
+ 
+                markerOptions.title(latLng.latitude + " : " + latLng.longitude);
+                
+                map.clear();
+                map.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                map.addMarker(markerOptions);
+				             
+                LatLng curr = mCurr;
+                
+                GeoPoint src = new GeoPoint( (int) ( curr.latitude * 1E6 ), (int) (curr.longitude * 1E6 ) );
+                GeoPoint dst = new GeoPoint( (int) ( latLng.latitude * 1E6 ), (int) ( latLng.longitude * 1E6 ) );
+                
+                GoogleMapParser parser = new GoogleMapParser();
+                parser.parseJSON( src, dst );
+                
+                ArrayList<GeoPoint> geoPolyLine = parser.poly;
+                
+                for( int i = 0; i < geoPolyLine.size() - 1; i += 2 ) {
+                	
+                	GeoPoint geoSrc = geoPolyLine.get( i );
+                	GeoPoint geoDst = geoPolyLine.get( i + 1 );
+                	
+                	LatLng latlng1 = new LatLng( geoSrc.getLatitudeE6() / 1E6, geoSrc.getLongitudeE6() / 1E6 );
+                	LatLng latlng2 = new LatLng( geoDst.getLatitudeE6() / 1E6, geoDst.getLongitudeE6() / 1E6 );
+                	
+                	PolylineOptions po = new PolylineOptions();
+                	
+                	po.add( latlng1, latlng2 );
+                	po.width( 5 );
+                	po.color( Color.RED );
+                	po.zIndex( 100f );
+                	
+                	map.addPolyline( po );
+                }
+                
+			}
+		};
+		return clickListener;
 	}
 
-
-	@Override
-	public void onLocationSensorChanged(LLACoordinate location)
-	{
-	//	updateGeometriesLocation(location);
-	}
-
-	@Override
-	protected int getGUILayout() 
-	{
-		return R.layout.map;
-	}
-
-	@Override
-	protected IMetaioSDKCallback getMetaioSDKCallbackHandler() 
-	{
-		return null;
-	}
-
-	@Override
-	protected void loadContent() 
-	{		
-		updateGeometriesLocation( mSensors.getLocation() );
-	}
-		
-	private void updateGeometriesLocation(LLACoordinate location)
-	{
-		MetaioDebug.log( "updateGeometriesLocation call" );		
-	}
-
-	@Override
-	public void onGravitySensorChanged(float[] gravity) {
-		
-	}
-
-	@Override
-	public void onHeadingSensorChanged(float[] orientation) {
-		
-	}
-
-	@Override
-	protected void onGeometryTouched(IGeometry geometry) {
-		
-	}
 }

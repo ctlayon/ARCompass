@@ -18,6 +18,8 @@ import com.metaio.sdk.jni.IGeometry;
 import com.metaio.sdk.jni.IMetaioSDKCallback;
 import com.metaio.sdk.jni.IRadar;
 import com.metaio.sdk.jni.LLACoordinate;
+import com.metaio.sdk.jni.Rotation;
+import com.metaio.sdk.jni.Vector3d;
 import com.metaio.tools.io.AssetsManager;
 
 public class ARCompass extends MetaioSDKViewActivity implements SensorsComponentAndroid.Callback  {
@@ -33,11 +35,6 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	
 	private IRadar mRadar;
 	
-	// Testing variable
-	// TODO: Remove when done testing
-	
-	private LLACoordinate mCoord;
-
 	// Determines how far away each geometry appears
 	
 	private static final double OFFSET = 0.00002;
@@ -82,7 +79,7 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 	@Override
 	public void onLocationSensorChanged( LLACoordinate location )
 	{
-		updateGeometriesLocation( mCoord );
+		updateGeometriesLocation( location );
 	}
 
 
@@ -115,14 +112,25 @@ public class ARCompass extends MetaioSDKViewActivity implements SensorsComponent
 		String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
 		if ( filepath != null ) 
 		{
-			mGeometryNorth = metaioSDK.loadImageBillboard( createBillboardTexture( "North" ) );
+			// mGeometryNorth = metaioSDK.loadImageBillboard( createBillboardTexture( "North" ) );
 			mGeometrySouth = metaioSDK.loadImageBillboard( createBillboardTexture( "South" ) );
 			mGeometryWest  = metaioSDK.loadImageBillboard( createBillboardTexture( "West" ) );
 			mGeometryEast  = metaioSDK.loadImageBillboard( createBillboardTexture( "East" ) );				
 		}
 		
-		mCoord = mSensors.getLocation();
-		
+		filepath = AssetsManager.getAssetPath( "Assets5/compassAR.md2" );
+		if( filepath != null ) 
+		{
+			mGeometryNorth = metaioSDK.createGeometry( filepath );
+			mGeometryNorth.setScale( new Vector3d( .5f, .5f, .5f) );
+			float rX, rY, rZ;
+			rX = (float) Math.toRadians( 90 );
+			rY = (float) Math.toRadians( 0 );
+			rZ = (float) Math.toRadians( 0 );
+			
+			mGeometryNorth.setRotation( new Rotation( rX, rY, rZ ) );
+		}
+				
 		updateGeometriesLocation( mSensors.getLocation() );
 		
 		// create radar
