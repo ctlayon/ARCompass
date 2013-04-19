@@ -54,7 +54,8 @@
         <activity
             android:name="com.ctlayon.arcompass.ARCompass"
             android:configChanges="fontScale|keyboard|keyboardHidden|locale|mnc|mcc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|touchscreen"
-            android:theme="@style/Theme.FullScreen" >
+            android:theme="@style/Theme.FullScreen"
+            android:screenOrientation="portrait" >
         </activity>
         <activity
             android:name="com.ctlayon.arcompass.Compass"

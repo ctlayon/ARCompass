@@ -1,309 +1,240 @@
 package com.ctlayon.arcompass;
 
-import java.io.FileOutputStream;
-
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Typeface;
+import android.content.Context;
+import android.hardware.SensorListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.FloatMath;
 import android.util.Log;
 import android.view.View;
 
 import com.metaio.sdk.MetaioDebug;
-import com.metaio.sdk.SensorsComponentAndroid;
 import com.metaio.sdk.jni.IGeometry;
 import com.metaio.sdk.jni.IMetaioSDKCallback;
-import com.metaio.sdk.jni.IRadar;
-import com.metaio.sdk.jni.LLACoordinate;
 import com.metaio.sdk.jni.Rotation;
+import com.metaio.sdk.jni.TrackingValues;
 import com.metaio.sdk.jni.Vector3d;
 import com.metaio.tools.io.AssetsManager;
 
-public class ARCompass extends MetaioSDKViewActivity implements SensorsComponentAndroid.Callback  {
-	 
-	// POI's for compass aka North, South, East, West
+public class ARCompass extends MetaioSDKViewActivity {
+
+	private IGeometry mCompassModel;
+	private MetaioSDKCallbackHandler mCallbackHandler;
 	
-	private IGeometry mGeometrySouth;
-	private IGeometry mGeometryWest;
-	private IGeometry mGeometryNorth;
-	private IGeometry mGeometryEast;
+	private boolean mIsCloseToModel = false;
+	private boolean mUpdate = false;
 	
-	// Radar for tracking POI's
+	private int frameCount = 0;
+
+	String trackingConfigFile = null;	
+	SensorManager sensorManager;
 	
-	private IRadar mRadar;
-	
-	// Determines how far away each geometry appears
-	
-	private static final double OFFSET = 0.00002;
+	float pitch = 25;
+	float roll = 60;
+	float heading = (float) Math.toRadians( 90 );
 	
 	@Override
-	public void onCreate(Bundle savedInstanceState) 
+	protected int getGUILayout() 
 	{
-		super.onCreate(savedInstanceState);
-				
-		//Load Tracking data
-		String trackingConfigFile = AssetsManager.getAssetPath("Assets5/tracking.xml");
-		
-		boolean result = metaioSDK.setTrackingConfiguration(trackingConfigFile);
-		MetaioDebug.log( "Tracking data loaded: " + result );  
+		return R.layout.compass_rectified; 
 	}
 	
 	@Override
-	protected void onPause() 
+	public void onCreate(Bundle savedInstanceState) {
+		
+		mCallbackHandler = new MetaioSDKCallbackHandler();
+		super.onCreate(savedInstanceState);
+		
+		sensorManager = (SensorManager) getSystemService( Context.SENSOR_SERVICE );
+		updateOrientation(heading, pitch, roll);
+		
+	}
+	
+	private final SensorListener sensorListener = new SensorListener() {
+
+        public void onSensorChanged(int sensor, float[] values) {
+            updateOrientation( values[SensorManager.DATA_Z], values[SensorManager.DATA_Y], values[SensorManager.DATA_X] );
+        }
+
+        public void onAccuracyChanged(int sensor, int accuracy) {
+        }
+
+    };
+
+	private void updateOrientation(float pRoll, float pPitch, float pHeading) {
+		heading = (float) Math.toRadians( pHeading + 90 );
+		pitch = (float) Math.toRadians( pPitch );
+		roll = (float) Math.toRadians( pRoll );
+	
+		if ( mCompassModel != null) {
+			TrackingValues currentPose = metaioSDK.getTrackingValues(1);
+			currentPose.setRotation( new Rotation( new Vector3d( 0, 0, heading ) ) );
+			mCompassModel.setRotation( new Rotation( new Vector3d( 0, 0, heading ) ) );
+			
+		}
+	}
+	
+	@Override
+	protected IMetaioSDKCallback getMetaioSDKCallbackHandler()
 	{
-		super.onPause();
-		
-		// remove callback
-		
-		if (mSensors != null)
-			mSensors.registerCallback(null);		
-		
+		return mCallbackHandler;
 	}
 
 	@Override
-	protected void onResume() 
+	public void onDrawFrame() 
+	{
+		super.onDrawFrame();
+		
+		if (metaioSDK != null) {
+			if( frameCount > 500 ) {
+				mCompassModel.setRotation( new Rotation( 0f, 0f, (float) heading ) );
+				metaioSDK.startInstantTracking( "INSTANT_2D" );
+				frameCount = 0;
+			}
+			else if ( mCompassModel.isVisible() ) {
+				checkDistanceToTarget();
+				if( mIsCloseToModel && mUpdate) {
+					mCompassModel.setRotation( new Rotation( 0f, 0f, (float) heading ) );
+					metaioSDK.startInstantTracking( "INSTANT_2D" );
+					mUpdate = false;
+					frameCount = 0;
+				} else if( !mIsCloseToModel && mUpdate ) {
+					mCompassModel.setRotation(new Rotation(0f, 0f, (float) heading ) );
+					metaioSDK.startInstantTracking("INSTANT_2D");
+					mUpdate = false;
+					frameCount = 0;
+				}
+				
+			} else if( frameCount > 150 ) {
+				mCompassModel.setRotation(new Rotation(0f, 0f, (float) heading ) );
+				metaioSDK.startInstantTracking("INSTANT_2D");
+				frameCount = 0;
+			}	
+			frameCount++;
+		}
+	}
+
+	@Override
+	protected void onStart() 
+	{
+		super.onStart();
+		
+		// hide GUI until SDK is ready
+		
+		if (!mRendererInitialized)
+			mGUIView.setVisibility(View.GONE);	
+		
+	}
+	@Override protected void onResume() 
 	{
 		super.onResume();
-
-		// Register callback to receive sensor updates
 		
-		if (mSensors != null)
-			mSensors.registerCallback(this);
-		
+		sensorManager.registerListener(sensorListener,
+                SensorManager.SENSOR_ORIENTATION,
+                SensorManager.SENSOR_DELAY_FASTEST);
 	}
-
-
 	@Override
-	public void onLocationSensorChanged( LLACoordinate location )
+	protected void onStop() 
 	{
-		updateGeometriesLocation( location );
+		sensorManager.unregisterListener(sensorListener);
+		super.onStop();
 	}
 
-
-	/**
-	 * Click Handler for the close button
-	 * @param v View object you're currently in ( ARCamera mode )
-	 */
 	public void onButtonClick(View v)
 	{
 		finish();
 	}
-
-	@Override
-	protected int getGUILayout() 
-	{
-		return R.layout.compass;
-	}
-
-	@Override
-	protected IMetaioSDKCallback getMetaioSDKCallbackHandler() 
-	{
-		return null;
-	}
-
+		
 	@Override
 	protected void loadContent() 
 	{
-		// Load the POI's into memory
+		String compassPath = AssetsManager.getAssetPath( "Assets5/compassAR.md2" );		
 		
-		String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
-		if ( filepath != null ) 
-		{
-			// mGeometryNorth = metaioSDK.loadImageBillboard( createBillboardTexture( "North" ) );
-			mGeometrySouth = metaioSDK.loadImageBillboard( createBillboardTexture( "South" ) );
-			mGeometryWest  = metaioSDK.loadImageBillboard( createBillboardTexture( "West" ) );
-			mGeometryEast  = metaioSDK.loadImageBillboard( createBillboardTexture( "East" ) );				
-		}
-		
-		filepath = AssetsManager.getAssetPath( "Assets5/compassAR.md2" );
-		if( filepath != null ) 
-		{
-			mGeometryNorth = metaioSDK.createGeometry( filepath );
-			mGeometryNorth.setScale( new Vector3d( .5f, .5f, .5f) );
-			float rX, rY, rZ;
-			rX = (float) Math.toRadians( 90 );
-			rY = (float) Math.toRadians( 0 );
-			rZ = (float) Math.toRadians( 0 );
-			
-			mGeometryNorth.setRotation( new Rotation( rX, rY, rZ ) );
-		}
-				
-		updateGeometriesLocation( mSensors.getLocation() );
-		
-		// create radar
-		
-		mRadar = metaioSDK.createRadar();
-		mRadar.setBackgroundTexture( AssetsManager.getAssetPath( "Assets5/radar.png" ) );
-		mRadar.setObjectsDefaultTexture( AssetsManager.getAssetPath( "Assets5/yellow.png" ) );
-		mRadar.setRelativeToScreen( IGeometry.ANCHOR_TL );
-						
-		// add geometries to the radar
-		
-		mRadar.add( mGeometryNorth );
-		mRadar.add( mGeometrySouth );
-		mRadar.add( mGeometryWest  );
-		mRadar.add( mGeometryEast  );		
-	}
-	/**
-	 * Helper function for creating the North, South, East, West Text
-	 * @param billBoardTitle Text the ARBilliboard contains
-	 * @return filepath location to texture
-	 */
-	private String createBillboardTexture( String billBoardTitle )
-    {
-           try
-           {
-                  final String texturepath = getCacheDir() + "/" + billBoardTitle + ".png";
-                  Paint mPaint = new Paint();
-
-                  // Load background image (256x128), and make a mutable copy
-                  
-                  Bitmap billboard = null;
-                  
-                  //reading billboard background
-                  
-                  String filepath = AssetsManager.getAssetPath( "Assets5/POI_bg.png" );
-                  Bitmap mBackgroundImage = BitmapFactory.decodeFile(filepath);
-                  
-                  billboard = mBackgroundImage.copy( Bitmap.Config.ARGB_8888, true );
-
-
-                  Canvas c = new Canvas( billboard );
-
-                  mPaint.setColor( Color.WHITE );
-                  mPaint.setTextSize( 24 );
-                  mPaint.setTypeface( Typeface.DEFAULT );
-
-                  float y = 40;
-                  float x = 30;
-
-                  // Draw POI name
-                  
-                  if (billBoardTitle.length() > 0)
-                  {
-                        String n = billBoardTitle.trim();
-
-                        final int maxWidth = 160;
-
-                        int i = mPaint.breakText( n, true, maxWidth, null );
-                        c.drawText( n.substring(0, i), x, y, mPaint );
-
-                        // Draw second line if valid
-                        
-                        if (i < n.length())
-                        {
-                               n = n.substring(i);
-                               y += 20;
-                               i = mPaint.breakText( n, true, maxWidth, null );
-
-                               if ( i < n.length() )
-                               {
-                                      i = mPaint.breakText(n, true, maxWidth - 20, null);
-                                      c.drawText(n.substring(0, i) + "...", x, y, mPaint);
-                               } else {
-                                      c.drawText(n.substring(0, i), x, y, mPaint);
-                               }
-                        }
-
-                  }
-
-
-                  // writing file
-                  
-                  try
-                  {
-                	  FileOutputStream out = new FileOutputStream( texturepath );
-                      billboard.compress( Bitmap.CompressFormat.PNG, 90, out );
-                      MetaioDebug.log( "Texture file is saved to " + texturepath );
-                      return texturepath;
-                  } catch ( Exception e ) {
-                      MetaioDebug.log( "Failed to save texture file" );
-                	  e.printStackTrace();
-                   }
-                 
-                  billboard.recycle();
-                  billboard = null;
-
-           } catch (Exception e)
-           {
-                  MetaioDebug.log( "Error creating billboard texture: " + e.getMessage() );
-                  MetaioDebug.printStackTrace( Log.DEBUG, e );
-                  return null;
-           }
-           return null;
-    }
-	
-	/**
-	 * Updates the position of the Geometries
-	 * @param location current position of the phone
-	 * 
-	 * TODO: Remove debugging statements
-	 */
-	private void updateGeometriesLocation( LLACoordinate location )
-	{
-		if (mGeometrySouth != null)
-		{
-			location.setLatitude( location.getLatitude() - OFFSET );
-			MetaioDebug.log( "geometrySouth.setTranslationLLA: "+location );
-			mGeometrySouth.setTranslationLLA( location );
-			location.setLatitude( location.getLatitude() + OFFSET );
-		}
-		
-		if (mGeometryNorth != null)
-		{
-			location.setLatitude( location.getLatitude() + OFFSET );
-			MetaioDebug.log( "geometryNorth.setTranslationLLA: "+location );
-			mGeometryNorth.setTranslationLLA( location );
-			location.setLatitude( location.getLatitude() - OFFSET );
-		}
-		
-		if (mGeometryWest != null)
-		{
-			location.setLongitude( location.getLongitude() - OFFSET );
-			MetaioDebug.log( "geometryWest.setTranslationLLA: "+location );
-			mGeometryWest.setTranslationLLA( location );
-			location.setLongitude( location.getLongitude() + OFFSET );
-		}
-		
-		if ( mGeometryEast != null )
-		{
-			location.setLongitude( location.getLongitude() + OFFSET );
-			MetaioDebug.log( "geometryEast.setTranslationLLA: " + location );
-			mGeometryEast.setTranslationLLA( location );
-			location.setLongitude( location.getLongitude() - OFFSET );
-		}
-		
-	}
-	
-	@Override
-	protected void onGeometryTouched( final IGeometry geometry ) 
-	{
-		MetaioDebug.log( "Geometry selected: " + geometry );
-		
-		mSurfaceView.queueEvent( new Runnable()
-		{
-
-			@Override
-			public void run() 
-			{
-				mRadar.setObjectsDefaultTexture( AssetsManager.getAssetPath( "Assets5/yellow.png" ) );
-				mRadar.setObjectTexture( geometry, AssetsManager.getAssetPath( "Assets5/red.png" ) );
+		if ( compassPath != null ) {
+			mCompassModel = metaioSDK.createGeometry( compassPath );
+			if (mCompassModel != null) {
+				mCompassModel.setScale( new Vector3d( .05f, .05f, .05f ) );
+				MetaioDebug.log( "Loaded geometry " + compassPath );
+			} else {
+				MetaioDebug.log( Log.ERROR, "Error loading geometry: " + compassPath );
 			}
-		
-				
-		});
-	}
-
-	@Override
-	public void onGravitySensorChanged( float[] gravity ) {
+		}
 		
 	}
-
+	
+  
 	@Override
-	public void onHeadingSensorChanged(float[] orientation) {
+	protected void onGeometryTouched(IGeometry geometry) {
+		MetaioDebug.log( "Heading is: " + heading );
+	}
+	
+	final class MetaioSDKCallbackHandler extends IMetaioSDKCallback
+	{
+	
+		@Override
+		public void onSDKReady() 
+		{
+			// show GUI
+			runOnUiThread(new Runnable() 
+			{
+				@Override
+				public void run() 
+				{
+					mGUIView.setVisibility(View.VISIBLE);
+				}
+			});
+		}
 		
+
+		@Override
+		public void onInstantTrackingEvent(boolean success, String file)
+		{
+			if(success) {
+				MetaioDebug.log("MetaioSDKCallbackHandler.onInstantTrackingEvent: "+file);
+				metaioSDK.setTrackingConfiguration(file);
+			} else {
+				MetaioDebug.log("Failed to create instant tracking configuration!");
+			}
+		}
+	}
+	
+	
+	/**
+	 * Calculates how far away the object is from the camera update
+	 * Updates mIsCloseToObject and mUpdate
+	 */
+	private void checkDistanceToTarget() {
+		
+		TrackingValues currentPose = metaioSDK.getTrackingValues(1);
+		
+		// if the quality value > 0, it means we're currently tracking
+
+		if (currentPose.getQuality() > 0) {
+			
+			Vector3d poseTranslation = currentPose.getTranslation();
+			
+			// calculate the distance as sqrt( x^2 + y^2 + z^2 )
+			
+			float distanceToTarget = FloatMath.sqrt(
+					poseTranslation.getX() * poseTranslation.getX() + 
+					poseTranslation.getY() * poseTranslation.getY() + 
+					poseTranslation.getZ() * poseTranslation.getZ() );
+			
+			float threshold = 150;
+			
+			if (mIsCloseToModel) { 
+				if ( distanceToTarget > ( threshold + 10 ) ) {
+					mIsCloseToModel = false;
+					mUpdate = true;
+				}
+			}
+			else {
+				if (distanceToTarget < threshold) {					
+					mIsCloseToModel = true;
+					mUpdate = false;
+				}
+			}
+			
+		}
 	}
 }

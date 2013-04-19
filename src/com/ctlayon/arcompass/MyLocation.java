@@ -44,10 +44,10 @@ public class MyLocation {
         if(network_enabled)
             lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListenerNetwork);
         timer1=new Timer();
-        timer1.schedule(new GetLastLocation(), 20000);
+        timer1.schedule( new GetLastLocation(), 20000 );
         return true;
     }
-
+    
     LocationListener locationListenerGps = new LocationListener() {
         public void onLocationChanged(Location location) {
             timer1.cancel();
@@ -72,11 +72,11 @@ public class MyLocation {
         public void onStatusChanged(String provider, int status, Bundle extras) {}
     };
 
-    class GetLastLocation extends TimerTask {
+    public class GetLastLocation extends TimerTask {
         @Override
         public void run() {
-             lm.removeUpdates(locationListenerGps);
-             lm.removeUpdates(locationListenerNetwork);
+             lm.removeUpdates( locationListenerGps );
+             lm.removeUpdates( locationListenerNetwork );
 
              Location net_loc=null, gps_loc=null;
              if(gps_enabled)
