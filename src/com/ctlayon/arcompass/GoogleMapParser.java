@@ -20,24 +20,44 @@ import android.util.Log;
 
 import com.google.android.maps.GeoPoint;
 
-public class GoogleMapParser {
+public class GoogleMapParser {	
 	
-	private JSONObject jData;
 	public ArrayList<GeoPoint> poly;
 	
 	private GeoPoint geoPoint;
-
+	private JSONObject jData;
+	
+	/**
+	 * Default Constructor for Parser Classes
+	 * Initializes all variables
+	 */
 	public GoogleMapParser() {
-		jData = new JSONObject();
-		poly = new ArrayList<GeoPoint>();
+		this.jData = new JSONObject();
+		this.poly = new ArrayList<GeoPoint>();
+		this.geoPoint = null;
 	}
 	
-	public void parseJSON(GeoPoint src, GeoPoint dest) {
+	/**
+	 * parseJson queries google for routing information in json format
+	 * it then parses and stores the data in the public ArrayList poly.
+	 * 
+	 * The even entries in poly are src geopoints
+	 * The odd  entries in poly are dst geopoints
+	 *  
+	 * @param src where the route is starting from
+	 * @param dest where the route is ending
+	 */
+	public void parseJSON( GeoPoint src, GeoPoint dest ) {
+		
+		// Necessary null check for bad user input
+		
 		if( src == null || dest == null ) {
 			poly = null;
 			return;
 		}
 
+		// Build the query string
+		
         StringBuilder urlString = new StringBuilder();
         urlString.append( "http://maps.googleapis.com/maps/api/directions/json?" );
         urlString.append( "origin=" ); // from
@@ -50,9 +70,11 @@ public class GoogleMapParser {
         urlString.append( Double.toString( (double) dest.getLongitudeE6() / 1.0E6 ) );
         urlString.append( "&sensor=false" );
         
+        // Send the query for JSON data
+        
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpget = new HttpGet( urlString.toString() );
-        Log.d("NETOWRK", urlString.toString() );
+        
         HttpResponse response;
         
         try {
@@ -76,6 +98,16 @@ public class GoogleMapParser {
 		}
 	}
 	
+	/**
+	 * parseJson queries google for routing information in json format
+	 * it then parses and stores the data in the public ArrayList poly.
+	 * 
+	 * The even entries in poly are src geopoints
+	 * The odd  entries in poly are dst geopoints
+	 *  
+	 * @param src where the route is starting from
+	 * @param pAddress geolocation of where the route is ending
+	 */
 	public void parseJSON( GeoPoint src, String pAddress ) {
 		
 		String cleanText = pAddress.replace( " ", "+" );
@@ -114,6 +146,9 @@ public class GoogleMapParser {
 		}
 	}
 	
+	/**
+	 * Converts an input stream to a String
+	 */
 	private static String convertStreamToString(InputStream is) {
 
 		// To convert the InputStream to String we use the BufferedReader.readLine()
@@ -141,11 +176,14 @@ public class GoogleMapParser {
 		return sb.toString();
 	 }
 
+	/**
+	 * Parses the data stored in jData to the arraylist poly
+	 */
 	private void parse() throws JSONException {
 		
 		// routes
 		
-		JSONArray routes = jData.getJSONArray( "routes" );
+		JSONArray routes = this.jData.getJSONArray( "routes" );
 		 
 		for( int i = 0; i < routes.length(); i++ ) {
 

@@ -49,7 +49,9 @@ public class ARCompass extends MetaioSDKViewActivity {
 		updateOrientation(heading, pitch, roll);
 		
 	}
-	
+
+	// sensorlistener that is called everytime the heading, roll or pitch is changed
+
 	private final SensorListener sensorListener = new SensorListener() {
 
         public void onSensorChanged(int sensor, float[] values) {
@@ -61,6 +63,9 @@ public class ARCompass extends MetaioSDKViewActivity {
 
     };
 
+    /**
+     * Updates the 3D models pose, as well as the phones heading
+     */
 	private void updateOrientation(float pRoll, float pPitch, float pHeading) {
 		heading = (float) Math.toRadians( pHeading + 90 );
 		pitch = (float) Math.toRadians( pPitch );
@@ -83,14 +88,24 @@ public class ARCompass extends MetaioSDKViewActivity {
 	@Override
 	public void onDrawFrame() 
 	{
+		// TODO: turn frameCounter into a timer task
+		
 		super.onDrawFrame();
 		
 		if (metaioSDK != null) {
+			
+			// statistically speaking if the framecount is greater than 500
+			// it's time to resync it with the tracking object
+			
 			if( frameCount > 500 ) {
 				mCompassModel.setRotation( new Rotation( 0f, 0f, (float) heading ) );
 				metaioSDK.startInstantTracking( "INSTANT_2D" );
 				frameCount = 0;
 			}
+			
+			// checks if you gets too close to the object
+			// if you do it tries to redraw it
+			
 			else if ( mCompassModel.isVisible() ) {
 				checkDistanceToTarget();
 				if( mIsCloseToModel && mUpdate) {
@@ -105,11 +120,17 @@ public class ARCompass extends MetaioSDKViewActivity {
 					frameCount = 0;
 				}
 				
-			} else if( frameCount > 150 ) {
+			} 
+			
+			// if the object has been seen for 150 frames
+			// go ahead and redraw it on the current frame
+			
+			else if( frameCount > 150 ) {
 				mCompassModel.setRotation(new Rotation(0f, 0f, (float) heading ) );
 				metaioSDK.startInstantTracking("INSTANT_2D");
 				frameCount = 0;
 			}	
+			
 			frameCount++;
 		}
 	}
