@@ -10,4 +10,40 @@
         android:layout_height="match_parent"
         class="com.google.android.gms.maps.MapFragment" />
 
+    <Button
+        android:id="@+id/btnGo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignRight="@+id/destAddress"
+        android:layout_below="@+id/destAddress"
+        android:onClick="onGoClick"
+        android:text="    Go    " />
+
+    <EditText
+        android:id="@+id/destAddress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/txtDest"
+        android:layout_marginLeft="22dp"
+        android:ems="10"
+        android:inputType="textPostalAddress" />
+    
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/txtDest"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/destAddress"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="85dp"
+        android:text="Destination"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
 </RelativeLayout> 

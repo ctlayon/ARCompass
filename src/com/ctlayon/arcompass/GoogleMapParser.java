@@ -24,6 +24,8 @@ public class GoogleMapParser {
 	
 	private JSONObject jData;
 	public ArrayList<GeoPoint> poly;
+	
+	private GeoPoint geoPoint;
 
 	public GoogleMapParser() {
 		jData = new JSONObject();
@@ -31,6 +33,10 @@ public class GoogleMapParser {
 	}
 	
 	public void parseJSON(GeoPoint src, GeoPoint dest) {
+		if( src == null || dest == null ) {
+			poly = null;
+			return;
+		}
 
         StringBuilder urlString = new StringBuilder();
         urlString.append( "http://maps.googleapis.com/maps/api/directions/json?" );
@@ -58,6 +64,44 @@ public class GoogleMapParser {
                     InputStream instream = entity.getContent();
                     this.jData = new JSONObject( convertStreamToString( instream ) );
                     this.parse();
+                    instream.close();
+                }
+            }
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void parseJSON( GeoPoint src, String pAddress ) {
+		
+		String cleanText = pAddress.replace( " ", "+" );
+		cleanText = cleanText.replace( ",", "" );
+			
+		StringBuilder urlString = new StringBuilder();
+        urlString.append( "http://maps.googleapis.com/maps/api/geocode/json?" );
+        urlString.append( "address=" );
+        urlString.append( cleanText );
+        urlString.append( "&sensor=false" );
+        
+        HttpClient httpClient = new DefaultHttpClient();
+        HttpGet httpget = new HttpGet( urlString.toString() );
+        Log.d("NETOWRK", urlString.toString() );
+        HttpResponse response;
+        
+        try {
+			response = httpClient.execute( httpget );
+			if(response.getStatusLine().getStatusCode() == 200){
+                HttpEntity entity = response.getEntity();
+                //if its not empty
+                if (entity != null) {
+                    InputStream instream = entity.getContent();
+                    this.jData = new JSONObject( convertStreamToString( instream ) );
+                    this.parseGeoCode();
+                    this.parseJSON( src, geoPoint );
                     instream.close();
                 }
             }
@@ -128,6 +172,28 @@ public class GoogleMapParser {
 			 
 	}
 	
+	private void parseGeoCode() throws JSONException {
+		
+		// results
+		
+		JSONArray results = jData.getJSONArray( "results" );
+		 
+		for( int i = 0; i < results.length(); i++ ) {
+
+			JSONObject r = results.getJSONObject( i );
+			
+			// geometry
+			
+			JSONObject geometry = r.getJSONObject( "geometry" );
+			JSONObject location = geometry.getJSONObject( "location" );
+			double lat = location.getDouble( "lat" );
+			double lon = location.getDouble( "lng" );
+			
+			this.geoPoint = new GeoPoint( (int) (lat * 1E6), (int) (lon * 1E6) );
+		}
+		
+	}
+	
 	/**
 	 * Google, you're compression method is a joke
 	 * that is all.
@@ -139,7 +205,6 @@ public class GoogleMapParser {
 		int lat = 0, lng = 0;
 
 		GeoPoint p = null;
-		boolean isFirst = true;
 		
 		while (index < len) {
 			
@@ -176,11 +241,8 @@ public class GoogleMapParser {
 
 			p = new GeoPoint((int) (((double) lat / 1E5) * 1E6),
 				 (int) (((double) lng / 1E5) * 1E6));
-			if( isFirst ) {
-				poly.add(p);
-				isFirst = false;
-			}
+			
+			poly.add(p);
 		}
-		poly.add( p );
 	}
 }
